@@ -1,6 +1,12 @@
 package game
 
-// BoardElement represents sing object on the game board
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
+// BoardElement represents single object on the game board
 type BoardElement int
 
 // BoardElement can be one of the following colors
@@ -15,6 +21,16 @@ const (
 	White   BoardElement = 7
 )
 
+// BlockType represents one of the three blocks available in the game
+type BlockType int
+
+// BlockType can be one of the following values
+const (
+	A BlockType = 0
+	B BlockType = 1
+	C BlockType = 2
+)
+
 // Game struct contains 10x10 game board and three 5x5 blocks of shapes
 type Game struct {
 	Board  [][]BoardElement
@@ -23,22 +39,158 @@ type Game struct {
 	BlockC [][]BoardElement
 }
 
-// New Game is used to initialize Game struct
+// New Game is used to initialize Game struct: 10x10 board and three randomly
+// assigned blocks
 func New() Game {
-	g := Game{createContainer(10), createContainer(5), createContainer(5), createContainer(5)}
+	var g Game
+	g.Board = createContainer(10)
+	g.assignRandomBlocks()
 	return g
 }
 
-func createContainer(size int) [][]BoardElement {
-	board := make([][]BoardElement, size)
-	for i := 0; i < size; i++ {
-		board[i] = make([]BoardElement, size)
+// Move is used to select one of available blocks and place it on x,y position.
+// In case the placement is not possible or block does not exist error is returned.
+func (g *Game) Move(block BlockType, x int, y int) error {
+	var selectedBlock [][]BoardElement
+	switch block {
+	case A:
+		selectedBlock = g.BlockA
+		break
+	case B:
+		selectedBlock = g.BlockB
+		break
+	case C:
+		selectedBlock = g.BlockC
+		break
+	default:
+		return fmt.Errorf("Incorrect block type specified (%d)", block)
 	}
-	return board
+
+	if isBlockEmpty(selectedBlock) {
+		return fmt.Errorf("Selected block is empty")
+	}
+
+	error := g.placeBlock(x, y, selectedBlock)
+	if error != nil {
+		return error
+	}
+
+	emptyBlock := createContainer(5)
+	switch block {
+	case A:
+		g.BlockA = emptyBlock
+		break
+	case B:
+		g.BlockB = emptyBlock
+		break
+	case C:
+		g.BlockC = emptyBlock
+		break
+	}
+
+	if isBlockEmpty(g.BlockA) && isBlockEmpty(g.BlockB) && isBlockEmpty(g.BlockC) {
+		g.assignRandomBlocks()
+	}
+
+	return nil
 }
 
-// BlockShape returns one of 19 shapes available in the game
-func (g Game) BlockShape(number int) [][]BoardElement {
+func (g *Game) assignRandomBlocks() {
+	g.BlockA = randomShape()
+	g.BlockB = randomShape()
+	g.BlockC = randomShape()
+}
+
+// placeBlock places provided block on the board at x and y position being 0,0 block's position.
+// In case the placement is not possible error is returned.
+func (g *Game) placeBlock(x int, y int, block [][]BoardElement) error {
+	if x < 0 || y < 0 {
+		return fmt.Errorf("%d,%d is below 0,0", x, y)
+	}
+
+	newBoard := make([][]BoardElement, len(g.Board))
+	for i := range g.Board {
+		newBoard[i] = make([]BoardElement, len(g.Board[i]))
+		copy(newBoard[i], g.Board[i])
+	}
+
+	for boardX := x; boardX < x+len(block); boardX++ {
+		for boardY := y; boardY < y+len(block); boardY++ {
+			blockX := boardX - x
+			blockY := boardY - y
+			if boardX >= len(newBoard) || boardY >= len(newBoard) {
+				if block[blockX][blockY] != None {
+					return fmt.Errorf("%d,%d is out of board and block at %d,%d is not empty (%d)", boardX, boardY, blockX, blockY, block[blockX][blockY])
+				}
+				continue
+			}
+			if newBoard[boardX][boardY] == None {
+				newBoard[boardX][boardY] = block[blockX][blockY]
+			} else if block[blockX][blockY] != None {
+				return fmt.Errorf("board at %d,%d is not empty (%d) and block at %d,%d is also not empty (%d)", boardX, boardY, newBoard[boardX][boardY], blockX, blockY, block[blockX][blockY])
+			}
+		}
+	}
+
+	checkAndRemoveFullLanes(newBoard)
+
+	g.Board = newBoard
+	return nil
+}
+
+// checkAndRemoveFullLanes firstly counts all full rows and columns
+// and then removes them from the board, replacing with None value
+func checkAndRemoveFullLanes(board [][]BoardElement) {
+	rows := make([]bool, len(board))
+	cols := make([]bool, len(board))
+
+	score := 0
+
+	// check all full rows and columns before removing anything
+	for x := 0; x < len(board); x++ {
+		for y := 0; y < len(board); y++ {
+			rows[x] = board[x][y] != None
+			cols[y] = board[x][y] != None
+		}
+	}
+
+	// remove rows
+	for x := 0; x < len(rows); x++ {
+		if !rows[x] {
+			continue
+		}
+
+		score += len(cols)
+
+		for y := 0; y < len(cols); y++ {
+			board[x][y] = None
+		}
+	}
+
+	// remove columns
+	for y := 0; y < len(cols); y++ {
+		if !cols[y] {
+			continue
+		}
+
+		score += len(rows)
+
+		for x := 0; x < len(rows); x++ {
+			board[x][y] = None
+		}
+	}
+}
+
+// randomShape returns random shape from BlockShape method
+func randomShape() [][]BoardElement {
+	randomSource := rand.NewSource(time.Now().UnixNano())
+	randomGenerator := rand.New(randomSource)
+
+	return blockShape(randomGenerator.Intn(19))
+}
+
+// blockShape returns one of 19 shapes available in the game
+func blockShape(number int) [][]BoardElement {
 	switch number {
 	case 0:
 		return [][]BoardElement{
@@ -182,4 +334,25 @@ func (g Game) BlockShape(number int) [][]BoardElement {
 			{None, None, None, None, None},
 			{None, None, None, None, None}}
 	}
+}
+
+// createContainer returns square two diemnsional slice of size x size
+func createContainer(size int) [][]BoardElement {
+	board := make([][]BoardElement, size)
+	for i := 0; i < size; i++ {
+		board[i] = make([]BoardElement, size)
+	}
+	return board
+}
+
+// isBlockEmpty checks if all fields of the block are None
+func isBlockEmpty(block [][]BoardElement) bool {
+	for x := 0; x < len(block); x++ {
+		for y := 0; y < len(block); y++ {
+			if block[x][y] != None {
+				return false
+			}
+		}
+	}
+	return true
 }

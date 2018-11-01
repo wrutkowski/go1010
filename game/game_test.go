@@ -120,6 +120,23 @@ func TestCheckAndRemoveFullLanes(t *testing.T) {
 	checkAndRemoveFullLanes(g.Board)
 
 	assert.True(testBlockEmptiness("Board", g.Board, 10, t), "Board must be empty")
+
+	// scathered elements
+	g.Board[0][0] = Cyan
+	g.Board[0][1] = Yellow
+	g.Board[8][8] = Blue
+	g.Board[8][9] = Blue
+	g.Board[9][8] = Blue
+	g.Board[9][9] = Blue
+
+	checkAndRemoveFullLanes(g.Board)
+
+	assert.Equal(Cyan, g.Board[0][0], "Board[0][0] is not equal to Cyan")
+	assert.Equal(Yellow, g.Board[0][1], "Board[0][0] is not equal to Yellow")
+	assert.Equal(Blue, g.Board[8][8], "Board[8][8] is not equal to Blue")
+	assert.Equal(Blue, g.Board[8][9], "Board[8][9] is not equal to Blue")
+	assert.Equal(Blue, g.Board[9][8], "Board[9][8] is not equal to Blue")
+	assert.Equal(Blue, g.Board[9][9], "Board[9][9] is not equal to Blue")
 }
 
 func TestPlaceBlock(t *testing.T) {

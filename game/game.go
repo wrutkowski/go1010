@@ -141,41 +141,49 @@ func (g *Game) placeBlock(x int, y int, block [][]BoardElement) error {
 // checkAndRemoveFullLanes firstly counts all full rows and columns
 // and then removes them from the board, replacing with None value
 func checkAndRemoveFullLanes(board [][]BoardElement) {
-	rows := make([]bool, len(board))
-	cols := make([]bool, len(board))
+	fullRows := make([]bool, len(board))
+	fullCols := make([]bool, len(board))
+	for i := 0; i < len(board); i++ {
+		fullRows[i] = true
+		fullCols[i] = true
+	}
 
 	score := 0
 
 	// check all full rows and columns before removing anything
 	for x := 0; x < len(board); x++ {
 		for y := 0; y < len(board); y++ {
-			rows[x] = board[x][y] != None
-			cols[y] = board[x][y] != None
+			if fullRows[x] {
+				fullRows[x] = board[x][y] != None
+			}
+			if fullCols[y] {
+				fullCols[y] = board[x][y] != None
+			}
 		}
 	}
 
 	// remove rows
-	for x := 0; x < len(rows); x++ {
-		if !rows[x] {
+	for x := 0; x < len(fullRows); x++ {
+		if !fullRows[x] {
 			continue
 		}
 
-		score += len(cols)
+		score += len(fullCols)
 
-		for y := 0; y < len(cols); y++ {
+		for y := 0; y < len(fullCols); y++ {
 			board[x][y] = None
 		}
 	}
 
 	// remove columns
-	for y := 0; y < len(cols); y++ {
-		if !cols[y] {
+	for y := 0; y < len(fullCols); y++ {
+		if !fullCols[y] {
 			continue
 		}
 
-		score += len(rows)
+		score += len(fullRows)
 
-		for x := 0; x < len(rows); x++ {
+		for x := 0; x < len(fullRows); x++ {
 			board[x][y] = None
 		}
 	}

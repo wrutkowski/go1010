@@ -37,6 +37,7 @@ type Game struct {
 	BlockA [][]BoardElement
 	BlockB [][]BoardElement
 	BlockC [][]BoardElement
+	Score  int
 }
 
 // New Game is used to initialize Game struct: 10x10 board and three randomly
@@ -50,7 +51,7 @@ func New() Game {
 
 // Move is used to select one of available blocks and place it on x,y position.
 // In case the placement is not possible or block does not exist error is returned.
-func (g *Game) Move(block BlockType, x int, y int) error {
+func (g *Game) Move(block BlockType, x int, y int) (gameOver bool, moveError error) {
 	var selectedBlock [][]BoardElement
 	switch block {
 	case A:
@@ -63,16 +64,16 @@ func (g *Game) Move(block BlockType, x int, y int) error {
 		selectedBlock = g.BlockC
 		break
 	default:
-		return fmt.Errorf("Incorrect block type specified (%d)", block)
+		return false, fmt.Errorf("Incorrect block type specified (%d)", block)
 	}
 
 	if isBlockEmpty(selectedBlock) {
-		return fmt.Errorf("Selected block is empty")
+		return false, fmt.Errorf("Selected block is empty")
 	}
 
 	error := g.placeBlock(x, y, selectedBlock)
 	if error != nil {
-		return error
+		return false, error
 	}
 
 	emptyBlock := createContainer(5)
@@ -92,7 +93,11 @@ func (g *Game) Move(block BlockType, x int, y int) error {
 		g.assignRandomBlocks()
 	}
 
-	return nil
+	if g.isGameOver() {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (g *Game) assignRandomBlocks() {
@@ -114,6 +119,8 @@ func (g *Game) placeBlock(x int, y int, block [][]BoardElement) error {
 		copy(newBoard[i], g.Board[i])
 	}
 
+	placementScore := 0
+
 	for boardX := x; boardX < x+len(block); boardX++ {
 		for boardY := y; boardY < y+len(block); boardY++ {
 			blockX := boardX - x
@@ -126,21 +133,45 @@ func (g *Game) placeBlock(x int, y int, block [][]BoardElement) error {
 			}
 			if newBoard[boardX][boardY] == None {
 				newBoard[boardX][boardY] = block[blockX][blockY]
+				if block[blockX][blockY] != None {
+					placementScore++
+				}
 			} else if block[blockX][blockY] != None {
 				return fmt.Errorf("board at %d,%d is not empty (%d) and block at %d,%d is also not empty (%d)", boardX, boardY, newBoard[boardX][boardY], blockX, blockY, block[blockX][blockY])
 			}
 		}
 	}
 
-	checkAndRemoveFullLanes(newBoard)
+	fullLanesScore := checkAndRemoveFullLanes(newBoard)
 
 	g.Board = newBoard
+	g.Score += placementScore + fullLanesScore
 	return nil
+}
+
+func (g *Game) isMovePossible(block [][]BoardElement, x int, y int) bool {
+	for boardX := x; boardX < x+len(block); boardX++ {
+		for boardY := y; boardY < y+len(block); boardY++ {
+			blockX := boardX - x
+			blockY := boardY - y
+			if boardX >= len(g.Board) || boardY >= len(g.Board) {
+				if block[blockX][blockY] != None {
+					return false
+				}
+				continue
+			}
+			if g.Board[boardX][boardY] != None && block[blockX][blockY] != None {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 // checkAndRemoveFullLanes firstly counts all full rows and columns
 // and then removes them from the board, replacing with None value
-func checkAndRemoveFullLanes(board [][]BoardElement) {
+func checkAndRemoveFullLanes(board [][]BoardElement) int {
 	fullRows := make([]bool, len(board))
 	fullCols := make([]bool, len(board))
 	for i := 0; i < len(board); i++ {
@@ -187,6 +218,42 @@ func checkAndRemoveFullLanes(board [][]BoardElement) {
 			board[x][y] = None
 		}
 	}
+
+	return score
+}
+
+func (g *Game) isGameOver() bool {
+	movePossible := false
+	fmt.Println(g.BlockA, isBlockEmpty(g.BlockA))
+	fmt.Println(g.BlockB, isBlockEmpty(g.BlockB))
+	fmt.Println(g.BlockC, isBlockEmpty(g.BlockC))
+	if !isBlockEmpty(g.BlockA) && g.isMovePossibleAnywhere(g.BlockA) {
+		movePossible = true
+	}
+	if !isBlockEmpty(g.BlockB) && g.isMovePossibleAnywhere(g.BlockB) {
+		movePossible = true
+	}
+	if !isBlockEmpty(g.BlockC) && g.isMovePossibleAnywhere(g.BlockC) {
+		movePossible = true
+	}
+
+	return !movePossible
+}
+
+func (g *Game) isMovePossibleAnywhere(block [][]BoardElement) bool {
+	for x := 0; x < len(g.Board); x++ {
+		for y := 0; y < len(g.Board[x]); y++ {
+			if g.Board[x][y] != None {
+				continue
+			}
+
+			if g.isMovePossible(block, x, y) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // randomShape returns random shape from BlockShape method

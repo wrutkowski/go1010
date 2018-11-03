@@ -53,7 +53,7 @@ func DrawGame(g game.Game) {
 	}
 
 	gameArea := mergeBoardsHorizontally(" ", boardDrawing, blockADrawing, blockBDrawing, blockCDrawing)
-	window := windowAround("go1010 | score: ?", gameArea, boardDrawingLength+3*blockDrawingLength+4)
+	window := windowAround("go1010 | score: "+strconv.Itoa(g.Score), gameArea, boardDrawingLength+3*blockDrawingLength+4)
 
 	fmt.Printf("\033[0;0H")
 	fmt.Print(window)

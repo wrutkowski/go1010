@@ -42,24 +42,24 @@ func TestMove(t *testing.T) {
 	g.BlockB = blockShape(1)
 	g.BlockC = blockShape(1)
 
-	if error := g.Move(A, 0, 0); error != nil {
+	if _, error := g.Move(A, 0, 0); error != nil {
 		t.Errorf("First move of BlockA to position 0,0 must succeed")
 	}
 	assert.True(testBlockEmptiness("BlockA", g.BlockA, 5, t), "BlockA must be empty")
 
-	if error := g.Move(A, 5, 5); error == nil {
+	if _, error := g.Move(A, 5, 5); error == nil {
 		t.Errorf("Second move of empty BlockA without moving B or C to position 5,5 must fail")
 	}
-	if error := g.Move(22, 5, 5); error == nil {
+	if _, error := g.Move(22, 5, 5); error == nil {
 		t.Errorf("Selected block (22) must fail")
 	}
 
-	if error := g.Move(B, 1, 0); error != nil {
+	if _, error := g.Move(B, 1, 0); error != nil {
 		t.Errorf("First move of BlockB to position 1,0 must succeed")
 	}
 	assert.True(testBlockEmptiness("BlockB", g.BlockA, 5, t), "BlockA must be empty")
 
-	if error := g.Move(C, 2, 0); error != nil {
+	if _, error := g.Move(C, 2, 0); error != nil {
 		t.Errorf("First move of BlockC to position 2,0 must succeed")
 	}
 
@@ -77,11 +77,11 @@ func TestMoveFullRow(t *testing.T) {
 	g.BlockA = blockShape(8)
 	g.BlockB = blockShape(8)
 
-	if error := g.Move(A, 0, 0); error != nil {
+	if _, error := g.Move(A, 0, 0); error != nil {
 		t.Errorf("Move of BlockA to position 0,0 must succeed")
 	}
 
-	if error := g.Move(B, 5, 0); error != nil {
+	if _, error := g.Move(B, 5, 0); error != nil {
 		t.Errorf("Move of BlockB to position 5,0 must succeed")
 	}
 
@@ -137,6 +137,57 @@ func TestCheckAndRemoveFullLanes(t *testing.T) {
 	assert.Equal(Blue, g.Board[8][9], "Board[8][9] is not equal to Blue")
 	assert.Equal(Blue, g.Board[9][8], "Board[9][8] is not equal to Blue")
 	assert.Equal(Blue, g.Board[9][9], "Board[9][9] is not equal to Blue")
+}
+
+func TestGameOver(t *testing.T) {
+	assert := assert.New(t)
+
+	g := New()
+
+	g.Board = [][]BoardElement{
+		{Green, None, Green, None, Green, None, Green, None, Green, None},
+		{None, Green, None, Green, None, Green, None, Green, None, Green},
+		{Green, None, Green, None, Green, None, Green, None, Green, None},
+		{None, Green, None, Green, None, Green, None, Green, None, Green},
+		{Green, None, Green, None, Green, None, Green, None, Green, None},
+		{None, Green, None, Green, None, Green, None, Green, None, Green},
+		{Green, None, Green, None, Green, None, Green, None, Green, None},
+		{None, Green, None, Green, None, Green, None, Green, None, Green},
+		{None, None, None, None, None, None, None, None, None, None},
+		{None, None, None, None, None, None, None, None, None, None}}
+
+	g.BlockA = blockShape(1)
+	g.BlockB = blockShape(1)
+	g.BlockC = blockShape(1)
+
+	assert.False(g.isGameOver())
+
+	g.BlockA = createContainer(5)
+	g.BlockB = blockShape(10)
+	g.BlockC = createContainer(5)
+
+	assert.True(g.isGameOver())
+
+	g.BlockA = blockShape(10)
+	g.BlockB = blockShape(10)
+	g.BlockC = blockShape(11)
+
+	assert.True(g.isGameOver())
+
+	g.BlockA = createContainer(5)
+	g.BlockB = createContainer(5)
+	g.BlockC = blockShape(1)
+
+	assert.False(g.isGameOver())
+
+	g.BlockA = blockShape(1)
+	g.BlockB = blockShape(10)
+	g.BlockC = createContainer(5)
+
+	gameOver, error := g.Move(A, 8, 0)
+
+	assert.True(gameOver)
+	assert.Nil(error)
 }
 
 func TestPlaceBlock(t *testing.T) {

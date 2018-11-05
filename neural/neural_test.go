@@ -55,7 +55,7 @@ func TestRun(t *testing.T) {
 	assert.Equal([]float32{0.18928106, 0.18928106}, output)
 }
 
-func TestMutated(t *testing.T) {
+func TestMutatedChangedSign(t *testing.T) {
 	assert := assert.New(t)
 
 	var stubRandomProvider StubRandomProvider
@@ -67,6 +67,38 @@ func TestMutated(t *testing.T) {
 			return float32(1.5)
 		}
 
+		return float32(0)
+	}
+	neuralNetwork := NewNetwork([]int{2, 3, 2}, stubRandomProvider)
+
+	mutant := neuralNetwork.Mutated()
+
+	assert.Equal(float32(-0.25), mutant.neuronLayers[1][0].weights[0])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[1][0].weights[1])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[1][1].weights[0])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[1][1].weights[1])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[1][2].weights[0])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[1][2].weights[1])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[2][0].weights[0])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[2][0].weights[1])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[2][0].weights[2])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[2][1].weights[0])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[2][1].weights[1])
+	assert.Equal(float32(-0.25), mutant.neuronLayers[2][1].weights[2])
+}
+
+func TestMutatedAddition(t *testing.T) {
+	assert := assert.New(t)
+
+	var stubRandomProvider StubRandomProvider
+	stubRandomProvider.StubNextRangeFunction = func(min float32, max float32) float32 {
+		if min == -1 && max == 1 {
+			return float32(0.25)
+		}
+		if min == 0 && max == 100 {
+			return float32(4)
+		}
+
 		if min == 0 && max == 0.3 {
 			return float32(0.2)
 		}
@@ -76,30 +108,51 @@ func TestMutated(t *testing.T) {
 
 	mutant := neuralNetwork.Mutated()
 
-	assert.Equal(3, len(mutant.neuronLayers))
+	assert.Equal(float32(0.3), mutant.neuronLayers[1][0].weights[0])
+	assert.Equal(float32(0.3), mutant.neuronLayers[1][0].weights[1])
+	assert.Equal(float32(0.3), mutant.neuronLayers[1][1].weights[0])
+	assert.Equal(float32(0.3), mutant.neuronLayers[1][1].weights[1])
+	assert.Equal(float32(0.3), mutant.neuronLayers[1][2].weights[0])
+	assert.Equal(float32(0.3), mutant.neuronLayers[1][2].weights[1])
+	assert.Equal(float32(0.3), mutant.neuronLayers[2][0].weights[0])
+	assert.Equal(float32(0.3), mutant.neuronLayers[2][0].weights[1])
+	assert.Equal(float32(0.3), mutant.neuronLayers[2][0].weights[2])
+	assert.Equal(float32(0.3), mutant.neuronLayers[2][1].weights[0])
+	assert.Equal(float32(0.3), mutant.neuronLayers[2][1].weights[1])
+	assert.Equal(float32(0.3), mutant.neuronLayers[2][1].weights[2])
+}
 
-	assert.Equal(2, len(mutant.neuronLayers[0]))
-	assert.Equal(3, len(mutant.neuronLayers[1]))
-	assert.Equal(2, len(mutant.neuronLayers[2]))
+func TestMutatedSubtraction(t *testing.T) {
+	assert := assert.New(t)
 
-	assert.Equal(0, len(mutant.neuronLayers[0][0].weights))
-	assert.Equal(0, len(mutant.neuronLayers[0][1].weights))
-	assert.Equal(2, len(mutant.neuronLayers[1][0].weights))
-	assert.Equal(2, len(mutant.neuronLayers[1][1].weights))
-	assert.Equal(2, len(mutant.neuronLayers[1][2].weights))
-	assert.Equal(3, len(mutant.neuronLayers[2][0].weights))
-	assert.Equal(3, len(mutant.neuronLayers[2][1].weights))
+	var stubRandomProvider StubRandomProvider
+	stubRandomProvider.StubNextRangeFunction = func(min float32, max float32) float32 {
+		if min == -1 && max == 1 {
+			return float32(0.25)
+		}
+		if min == 0 && max == 100 {
+			return float32(5)
+		}
 
-	assert.Equal(float32(0.2), mutant.neuronLayers[1][0].weights[0])
-	assert.Equal(float32(0.25), mutant.neuronLayers[1][0].weights[1])
-	assert.Equal(float32(0.25), mutant.neuronLayers[1][1].weights[0])
-	assert.Equal(float32(0.25), mutant.neuronLayers[1][1].weights[1])
-	assert.Equal(float32(0.25), mutant.neuronLayers[1][2].weights[0])
-	assert.Equal(float32(0.25), mutant.neuronLayers[1][2].weights[1])
-	assert.Equal(float32(0.25), mutant.neuronLayers[2][0].weights[0])
-	assert.Equal(float32(0.25), mutant.neuronLayers[2][0].weights[1])
-	assert.Equal(float32(0.25), mutant.neuronLayers[2][0].weights[2])
-	assert.Equal(float32(0.25), mutant.neuronLayers[2][1].weights[0])
-	assert.Equal(float32(0.25), mutant.neuronLayers[2][1].weights[1])
-	assert.Equal(float32(0.25), mutant.neuronLayers[2][1].weights[2])
+		if min == 0 && max == 0.3 {
+			return float32(0.1)
+		}
+		return float32(0)
+	}
+	neuralNetwork := NewNetwork([]int{2, 3, 2}, stubRandomProvider)
+
+	mutant := neuralNetwork.Mutated()
+
+	assert.Equal(float32(0.225), mutant.neuronLayers[1][0].weights[0])
+	assert.Equal(float32(0.225), mutant.neuronLayers[1][0].weights[1])
+	assert.Equal(float32(0.225), mutant.neuronLayers[1][1].weights[0])
+	assert.Equal(float32(0.225), mutant.neuronLayers[1][1].weights[1])
+	assert.Equal(float32(0.225), mutant.neuronLayers[1][2].weights[0])
+	assert.Equal(float32(0.225), mutant.neuronLayers[1][2].weights[1])
+	assert.Equal(float32(0.225), mutant.neuronLayers[2][0].weights[0])
+	assert.Equal(float32(0.225), mutant.neuronLayers[2][0].weights[1])
+	assert.Equal(float32(0.225), mutant.neuronLayers[2][0].weights[2])
+	assert.Equal(float32(0.225), mutant.neuronLayers[2][1].weights[0])
+	assert.Equal(float32(0.225), mutant.neuronLayers[2][1].weights[1])
+	assert.Equal(float32(0.225), mutant.neuronLayers[2][1].weights[2])
 }

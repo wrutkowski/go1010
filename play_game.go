@@ -63,13 +63,10 @@ func nextMoveInteractive() (block game.BlockType, x int, y int, exit bool) {
 	switch blockNumber {
 	case 0:
 		selectedBlock = game.A
-		break
 	case 1:
 		selectedBlock = game.B
-		break
 	case 2:
 		selectedBlock = game.C
-		break
 	}
 
 	return selectedBlock, positionX, positionY, false

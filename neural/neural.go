@@ -93,7 +93,33 @@ func (network Network) Run(input []float32) []float32 {
 // probability in three different ways
 // - 2% to change the sign
 // - 3% to add randomized 0-30%
-// - 3% to substract randomized 0-30%
+// - 3% to subtract randomized 0-30%
 func (network Network) Mutated() Network {
-	return network
+	var mutant Network
+	mutant.randomProvider = network.randomProvider
+	mutant.neuronLayers = make([][]Neuron, len(network.neuronLayers))
+	for layerIndex := 0; layerIndex < len(network.neuronLayers); layerIndex++ {
+		mutant.neuronLayers[layerIndex] = make([]Neuron, len(network.neuronLayers[layerIndex]))
+		for neuronIndex := 0; neuronIndex < len(network.neuronLayers[layerIndex]); neuronIndex++ {
+			var neuron Neuron
+			neuron.weights = make([]float32, len(network.neuronLayers[layerIndex][neuronIndex].weights))
+			for weightIndex := 0; weightIndex < len(network.neuronLayers[layerIndex][neuronIndex].weights); weightIndex++ {
+				currentWeight := network.neuronLayers[layerIndex][neuronIndex].weights[weightIndex]
+
+				// mutate the weight
+				switch probability := network.randomProvider.NextRange(0, 100); {
+				case probability < 2:
+					currentWeight = -1 * currentWeight
+				case probability < 5:
+					currentWeight += network.randomProvider.NextRange(0, 0.3) * currentWeight
+				case probability < 8:
+					currentWeight -= network.randomProvider.NextRange(0, 0.3) * currentWeight
+				}
+
+				neuron.weights[weightIndex] = currentWeight
+			}
+			mutant.neuronLayers[layerIndex][neuronIndex] = neuron
+		}
+	}
+	return mutant
 }

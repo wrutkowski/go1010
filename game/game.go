@@ -56,13 +56,10 @@ func (g *Game) Move(block BlockType, x int, y int) (gameOver bool, moveError err
 	switch block {
 	case A:
 		selectedBlock = g.BlockA
-		break
 	case B:
 		selectedBlock = g.BlockB
-		break
 	case C:
 		selectedBlock = g.BlockC
-		break
 	default:
 		return false, fmt.Errorf("Incorrect block type specified (%d)", block)
 	}
@@ -80,13 +77,10 @@ func (g *Game) Move(block BlockType, x int, y int) (gameOver bool, moveError err
 	switch block {
 	case A:
 		g.BlockA = emptyBlock
-		break
 	case B:
 		g.BlockB = emptyBlock
-		break
 	case C:
 		g.BlockC = emptyBlock
-		break
 	}
 
 	if isBlockEmpty(g.BlockA) && isBlockEmpty(g.BlockB) && isBlockEmpty(g.BlockC) {

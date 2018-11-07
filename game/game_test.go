@@ -42,25 +42,27 @@ func TestMove(t *testing.T) {
 	g.BlockB = blockShape(1)
 	g.BlockC = blockShape(1)
 
-	if _, error := g.Move(A, 0, 0); error != nil {
-		t.Errorf("First move of BlockA to position 0,0 must succeed")
+	if error := g.Move(A, 0, 0); error != nil {
+		t.Errorf("First move of BlockA to position 0,0 must succeed. Received: %s", error)
 	}
 	assert.True(testBlockEmptiness("BlockA", g.BlockA, 5, t), "BlockA must be empty")
 
-	if _, error := g.Move(A, 5, 5); error == nil {
+	if error := g.Move(A, 5, 5); error == nil {
 		t.Errorf("Second move of empty BlockA without moving B or C to position 5,5 must fail")
 	}
-	if _, error := g.Move(22, 5, 5); error == nil {
+	g.GameOver = false
+	if error := g.Move(22, 5, 5); error == nil {
 		t.Errorf("Selected block (22) must fail")
 	}
+	g.GameOver = false
 
-	if _, error := g.Move(B, 1, 0); error != nil {
-		t.Errorf("First move of BlockB to position 1,0 must succeed")
+	if error := g.Move(B, 1, 0); error != nil {
+		t.Errorf("First move of BlockB to position 1,0 must succeed. Received: %s", error)
 	}
 	assert.True(testBlockEmptiness("BlockB", g.BlockA, 5, t), "BlockA must be empty")
 
-	if _, error := g.Move(C, 2, 0); error != nil {
-		t.Errorf("First move of BlockC to position 2,0 must succeed")
+	if error := g.Move(C, 2, 0); error != nil {
+		t.Errorf("First move of BlockC to position 2,0 must succeed. Received: %s", error)
 	}
 
 	// randomize all blocks again
@@ -77,11 +79,11 @@ func TestMoveFullRow(t *testing.T) {
 	g.BlockA = blockShape(8)
 	g.BlockB = blockShape(8)
 
-	if _, error := g.Move(A, 0, 0); error != nil {
+	if error := g.Move(A, 0, 0); error != nil {
 		t.Errorf("Move of BlockA to position 0,0 must succeed")
 	}
 
-	if _, error := g.Move(B, 5, 0); error != nil {
+	if error := g.Move(B, 5, 0); error != nil {
 		t.Errorf("Move of BlockB to position 5,0 must succeed")
 	}
 
@@ -184,10 +186,17 @@ func TestGameOver(t *testing.T) {
 	g.BlockB = blockShape(10)
 	g.BlockC = createContainer(5)
 
-	gameOver, error := g.Move(A, 8, 0)
+	error := g.Move(A, 8, 0)
 
-	assert.True(gameOver)
-	assert.Nil(error)
+	assert.NotNil(error)
+
+	errorGame, ok := error.(*ErrorGame)
+	if !ok {
+		assert.Fail("error is not of ErrorGame type")
+		return
+	}
+
+	assert.Equal(GameOver, errorGame.Reason)
 }
 
 func TestPlaceBlock(t *testing.T) {

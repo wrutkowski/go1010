@@ -58,7 +58,7 @@ func (network Network) newNeuron(weightCount int) Neuron {
 // neurons and Tanh as activator function. Return last layer as output.
 func (network Network) Run(input []float32) []float32 {
 	if len(network.neuronLayers) < 3 {
-		panic("Neural Network was configured incorrectly. It has less than required input, one hidden and out layer.")
+		panic("Neural Network was configured incorrectly. It has less than required input, one hidden and output layer.")
 	}
 	if len(network.neuronLayers[0]) != len(input) {
 		panic("input doesn't match first layeur of Neural Network")

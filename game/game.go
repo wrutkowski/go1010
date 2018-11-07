@@ -31,19 +31,45 @@ const (
 	C BlockType = 2
 )
 
+// ErrorGameReason represents numeric reason passed with the GameError struct
+type ErrorGameReason int
+
+// ErrorGameReasons
+const (
+	GameOver          ErrorGameReason = 1
+	IncorrectBlock    ErrorGameReason = 2
+	IncorrectPosition ErrorGameReason = 3
+)
+
+// ErrorGame struct implements Error interface and is used to communicate
+// about errors in the game
+type ErrorGame struct {
+	Reason  ErrorGameReason
+	Message string
+}
+
+func (e *ErrorGame) Error() string {
+	return e.Message
+}
+
 // Game struct contains 10x10 game board and three 5x5 blocks of shapes
 type Game struct {
-	Board  [][]BoardElement
-	BlockA [][]BoardElement
-	BlockB [][]BoardElement
-	BlockC [][]BoardElement
-	Score  int
+	Board    [][]BoardElement
+	BlockA   [][]BoardElement
+	BlockB   [][]BoardElement
+	BlockC   [][]BoardElement
+	Score    int
+	GameOver bool
+
+	randomGenerator *rand.Rand
 }
 
 // New Game is used to initialize Game struct: 10x10 board and three randomly
 // assigned blocks
 func New() Game {
 	var g Game
+	randomSource := rand.NewSource(time.Now().UnixNano())
+	g.randomGenerator = rand.New(randomSource)
 	g.Board = createContainer(10)
 	g.assignRandomBlocks()
 	return g
@@ -51,7 +77,11 @@ func New() Game {
 
 // Move is used to select one of available blocks and place it on x,y position.
 // In case the placement is not possible or block does not exist error is returned.
-func (g *Game) Move(block BlockType, x int, y int) (gameOver bool, moveError error) {
+func (g *Game) Move(block BlockType, x int, y int) error {
+	if g.GameOver {
+		return &ErrorGame{GameOver, "Cannot continue playing game in a game over state"}
+	}
+
 	var selectedBlock [][]BoardElement
 	switch block {
 	case A:
@@ -61,16 +91,19 @@ func (g *Game) Move(block BlockType, x int, y int) (gameOver bool, moveError err
 	case C:
 		selectedBlock = g.BlockC
 	default:
-		return false, fmt.Errorf("Incorrect block type specified (%d)", block)
+		g.GameOver = true
+		return &ErrorGame{IncorrectBlock, fmt.Sprintf("Incorrect block type specified (%d)", block)}
 	}
 
 	if isBlockEmpty(selectedBlock) {
-		return false, fmt.Errorf("Selected block is empty")
+		g.GameOver = true
+		return &ErrorGame{IncorrectBlock, "Selected block is empty"}
 	}
 
 	error := g.placeBlock(x, y, selectedBlock)
 	if error != nil {
-		return false, error
+		g.GameOver = true
+		return error
 	}
 
 	emptyBlock := createContainer(5)
@@ -88,23 +121,24 @@ func (g *Game) Move(block BlockType, x int, y int) (gameOver bool, moveError err
 	}
 
 	if g.isGameOver() {
-		return true, nil
+		g.GameOver = true
+		return &ErrorGame{GameOver, "No other move is possible. Game over."}
 	}
 
-	return false, nil
+	return nil
 }
 
 func (g *Game) assignRandomBlocks() {
-	g.BlockA = randomShape()
-	g.BlockB = randomShape()
-	g.BlockC = randomShape()
+	g.BlockA = g.randomShape()
+	g.BlockB = g.randomShape()
+	g.BlockC = g.randomShape()
 }
 
 // placeBlock places provided block on the board at x and y position being 0,0 block's position.
 // In case the placement is not possible error is returned.
 func (g *Game) placeBlock(x int, y int, block [][]BoardElement) error {
 	if x < 0 || y < 0 {
-		return fmt.Errorf("%d,%d is below 0,0", x, y)
+		return &ErrorGame{IncorrectPosition, fmt.Sprintf("%d,%d is below 0,0", x, y)}
 	}
 
 	newBoard := make([][]BoardElement, len(g.Board))
@@ -121,7 +155,7 @@ func (g *Game) placeBlock(x int, y int, block [][]BoardElement) error {
 			blockY := boardY - y
 			if boardX >= len(newBoard) || boardY >= len(newBoard) {
 				if block[blockX][blockY] != None {
-					return fmt.Errorf("%d,%d is out of board and block at %d,%d is not empty (%d)", boardX, boardY, blockX, blockY, block[blockX][blockY])
+					return &ErrorGame{IncorrectPosition, fmt.Sprintf("%d,%d is out of board and block at %d,%d is not empty (%d)", boardX, boardY, blockX, blockY, block[blockX][blockY])}
 				}
 				continue
 			}
@@ -131,7 +165,7 @@ func (g *Game) placeBlock(x int, y int, block [][]BoardElement) error {
 					placementScore++
 				}
 			} else if block[blockX][blockY] != None {
-				return fmt.Errorf("board at %d,%d is not empty (%d) and block at %d,%d is also not empty (%d)", boardX, boardY, newBoard[boardX][boardY], blockX, blockY, block[blockX][blockY])
+				return &ErrorGame{IncorrectPosition, fmt.Sprintf("board at %d,%d is not empty (%d) and block at %d,%d is also not empty (%d)", boardX, boardY, newBoard[boardX][boardY], blockX, blockY, block[blockX][blockY])}
 			}
 		}
 	}
@@ -218,9 +252,6 @@ func checkAndRemoveFullLanes(board [][]BoardElement) int {
 
 func (g *Game) isGameOver() bool {
 	movePossible := false
-	fmt.Println(g.BlockA, isBlockEmpty(g.BlockA))
-	fmt.Println(g.BlockB, isBlockEmpty(g.BlockB))
-	fmt.Println(g.BlockC, isBlockEmpty(g.BlockC))
 	if !isBlockEmpty(g.BlockA) && g.isMovePossibleAnywhere(g.BlockA) {
 		movePossible = true
 	}
@@ -251,11 +282,8 @@ func (g *Game) isMovePossibleAnywhere(block [][]BoardElement) bool {
 }
 
 // randomShape returns random shape from BlockShape method
-func randomShape() [][]BoardElement {
-	randomSource := rand.NewSource(time.Now().UnixNano())
-	randomGenerator := rand.New(randomSource)
-
-	return blockShape(randomGenerator.Intn(19))
+func (g *Game) randomShape() [][]BoardElement {
+	return blockShape(g.randomGenerator.Intn(19))
 }
 
 // blockShape returns one of 19 shapes available in the game

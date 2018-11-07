@@ -26,8 +26,27 @@ func PrepareTerminal() {
 	}
 }
 
+// DrawGames draws an array of games in rows x columns grid layout
+func DrawGames(columns int, rows int, games []game.Game) {
+	fmt.Printf("\033[0;0H")
+	for row := 0; row < rows; row++ {
+		horizontalWindows := make([]string, columns)
+		for column := 0; column < columns; column++ {
+			index := row*columns + column
+			horizontalWindows[column] = drawGame(games[index], fmt.Sprintf("Neural Network: %d", index))
+		}
+		fmt.Print(mergeBoardsHorizontally(" ", horizontalWindows...))
+		fmt.Println()
+	}
+}
+
 // DrawGame draws board and three blocks
 func DrawGame(g game.Game) {
+	fmt.Printf("\033[0;0H")
+	fmt.Print(drawGame(g, "go1010"))
+}
+
+func drawGame(g game.Game, title string) string {
 	boardDrawing := drawBoard(g.Board)
 	blockADrawing := drawBoard(g.BlockA)
 	blockBDrawing := drawBoard(g.BlockB)
@@ -52,11 +71,14 @@ func DrawGame(g game.Game) {
 		}
 	}
 
+	gameOver := ""
+	if g.GameOver {
+		gameOver = " - GAME OVER"
+	}
 	gameArea := mergeBoardsHorizontally(" ", boardDrawing, blockADrawing, blockBDrawing, blockCDrawing)
-	window := windowAround("go1010 | score: "+strconv.Itoa(g.Score), gameArea, boardDrawingLength+3*blockDrawingLength+4)
+	window := windowAround(title+" | score: "+strconv.Itoa(g.Score)+gameOver, gameArea, boardDrawingLength+3*blockDrawingLength+4)
 
-	fmt.Printf("\033[0;0H")
-	fmt.Print(window)
+	return window
 }
 
 func boardElementToString(element game.BoardElement) string {

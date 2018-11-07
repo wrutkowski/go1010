@@ -26,12 +26,12 @@ func main() {
 			break
 		}
 
-		gameOver, _ := g.Move(block, x, y)
+		g.Move(block, x, y)
 
 		drawer.PrepareTerminal()
 		drawer.DrawGame(g)
 
-		if gameOver {
+		if g.GameOver {
 			fmt.Println("GAME OVER")
 			break
 		}

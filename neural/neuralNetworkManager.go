@@ -1,6 +1,7 @@
 package neural
 
 import (
+	"fmt"
 	"math/rand"
 	"sort"
 	"time"
@@ -64,6 +65,10 @@ func (manager *NetworkManager) NextGeneration() {
 
 	population := manager.Population()
 	nextGeneration := make([]Network, population)
+	fmt.Printf("Network[0] fitness: %.0f        \n", manager.Networks[0].Fitness)
+	fmt.Printf("Network[1] fitness: %.0f        \n", manager.Networks[1].Fitness)
+	fmt.Printf("Network[2] fitness: %.0f        \n", manager.Networks[2].Fitness)
+	fmt.Print("\033[4A")
 	for networkIndex := 0; networkIndex < population; networkIndex++ {
 		p := float32(networkIndex) / float32(population)
 		if networkIndex == 0 {

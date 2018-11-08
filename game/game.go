@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"math/rand"
-	"time"
 )
 
 // BoardElement represents single object on the game board
@@ -68,7 +67,8 @@ type Game struct {
 // assigned blocks
 func New() Game {
 	var g Game
-	randomSource := rand.NewSource(time.Now().UnixNano())
+	// randomSource := rand.NewSource(time.Now().UnixNano())
+	randomSource := rand.NewSource(1)
 	g.randomGenerator = rand.New(randomSource)
 	g.Board = createContainer(10)
 	g.assignRandomBlocks()

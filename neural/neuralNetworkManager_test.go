@@ -70,7 +70,7 @@ func TestSortNetworksByFitness(t *testing.T) {
 
 	manager.Networks = []Network{net1, net2, net3}
 
-	manager.sortNetworksByFitness()
+	manager.SortNetworksByFitness()
 
 	// sort is descending
 	assert.Equal(float32(10), manager.Networks[0].Fitness)

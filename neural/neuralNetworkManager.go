@@ -64,7 +64,7 @@ func makeLayers(inputs int, outputs int, hiddenLayers []int) []int {
 // - 3rd top performer mutants are assigned to 10% slots of the new generation
 // - the rest slots of the new generation are filled with randomized networks
 func (manager *NetworkManager) NextGeneration() {
-	manager.sortNetworksByFitness()
+	manager.SortNetworksByFitness()
 
 	population := manager.Population()
 	nextGeneration := make([]Network, population)
@@ -92,7 +92,9 @@ func (manager *NetworkManager) NextGeneration() {
 	manager.generationNumber++
 }
 
-func (manager NetworkManager) sortNetworksByFitness() {
+// SortNetworksByFitness sorts in-place all networks in descending order by
+// fitness value
+func (manager NetworkManager) SortNetworksByFitness() {
 	sort.Slice(manager.Networks, func(i, j int) bool {
 		return manager.Networks[i].Fitness > manager.Networks[j].Fitness
 	})
@@ -103,7 +105,7 @@ func (manager NetworkManager) sortNetworksByFitness() {
 func (manager NetworkManager) SaveToFile(name string) error {
 	neuralSerialized := ""
 
-	manager.sortNetworksByFitness()
+	manager.SortNetworksByFitness()
 
 	network := manager.Networks[0]
 
@@ -133,7 +135,7 @@ func (manager NetworkManager) SaveToFile(name string) error {
 // LoadFromFile loads and parses content of the file with given name and replaces
 // least performant network with parsed one, returns an error in case the load or
 // parse was not successful
-func (manager NetworkManager) LoadFromFile(name string) error {
+func (manager *NetworkManager) LoadFromFile(name string) error {
 	data, err := ioutil.ReadFile(name)
 	if err != nil {
 		return err
@@ -189,6 +191,7 @@ func (manager NetworkManager) LoadFromFile(name string) error {
 			loadedNetwork.neuronLayers[layerIndex][neuronIndex] = neuron
 		}
 	}
+
 	manager.Networks[len(manager.Networks)-1] = loadedNetwork
 
 	return nil

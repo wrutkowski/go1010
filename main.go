@@ -14,11 +14,11 @@ import (
 )
 
 func main() {
-	columns := 3
-	rows := 1
+	columns := 4
+	rows := 2
+	population := 500
 	drawEveryRun := false
 
-	population := rows * columns
 	neuralManager := neural.NewNetworkManager(175, 3, []int{200, 230, 170, 100, 32}, population)
 	games := make([]game.Game, population)
 
@@ -32,6 +32,8 @@ func main() {
 	untilNextGeneration := false
 	untilFitnessIsAbove := float32(0)
 	untilTimeHasPassed := time.Now()
+	refreshBoardsTimer := time.Now()
+	refreshBoardsRate := time.Duration(30 * time.Second)
 	loadFromFile := ""
 	saveToFile := ""
 
@@ -51,18 +53,25 @@ func main() {
 				exit, generations, steps, untilNextGeneration, untilFitnessIsAbove, runForSeconds, drawEveryRun, saveToFile, loadFromFile = nextCommand(drawEveryRun)
 				if runForSeconds > 0 {
 					untilTimeHasPassed = time.Now().Add(time.Second * time.Duration(runForSeconds))
+					refreshBoardsTimer = time.Now().Add(refreshBoardsRate)
 				}
 				if saveToFile != "" {
-					fmt.Print("Saving... ")
+					fmt.Print("Saving...")
 					if error := neuralManager.SaveToFile(saveToFile); error != nil {
-						fmt.Println("Error while saving. ", error)
+						fmt.Println("Error while saving. ", error, "Press enter to continue...")
+						bufio.NewReader(os.Stdin).ReadBytes('\n')
 					}
 					saveToFile = ""
 				}
 				if loadFromFile != "" {
-					fmt.Print("Loading... ")
+					fmt.Print("Loading...")
 					if error := neuralManager.LoadFromFile(loadFromFile); error != nil {
-						fmt.Println("Error while loading. ", error)
+						fmt.Println("Error while loading. ", error, "Press enter to continue...")
+						bufio.NewReader(os.Stdin).ReadBytes('\n')
+					} else {
+						for i := 0; i < population; i++ {
+							games[i] = game.New()
+						}
 					}
 					loadFromFile = ""
 				}
@@ -81,7 +90,16 @@ func main() {
 		}
 		if populationIsDead {
 			if untilTimeHasPassedDiff < 0 {
-				fmt.Println("Remaining running time:", untilTimeHasPassedDiff*-1)
+				if refreshBoardsTimer.Before(time.Now()) {
+					neuralManager.SortNetworksByFitness()
+					drawer.PrepareTerminal()
+					drawer.DrawGames(columns, rows, games)
+					fmt.Printf("Generation: %d\n", neuralManager.GenerationNumber())
+					refreshBoardsTimer = time.Now().Add(refreshBoardsRate)
+				}
+				fmt.Printf("Remaining running time: %v           \n", untilTimeHasPassedDiff*-1)
+			} else {
+				fmt.Println()
 			}
 			for i := 0; i < population; i++ {
 				games[i] = game.New()
@@ -222,7 +240,6 @@ func calculateFitness(g game.Game, errorGame error) float32 {
 }
 
 func outputToGameControl(output []float32, boardSize int) (block game.BlockType, x int, y int) {
-	// fmt.Println("OUTPUT:", output)
 	var outputBlock game.BlockType
 	if output[0] < -0.3333 {
 		outputBlock = game.A
@@ -234,8 +251,6 @@ func outputToGameControl(output []float32, boardSize int) (block game.BlockType,
 
 	outputX := ((output[1] + 1) / 2) * float32(boardSize)
 	outputY := ((output[2] + 1) / 2) * float32(boardSize)
-
-	// fmt.Println("GAME CONTROL:", outputBlock, int(outputX), int(outputY))
 
 	return outputBlock, int(outputX), int(outputY)
 }
@@ -283,6 +298,6 @@ func inputForGame(g game.Game) []float32 {
 			i++
 		}
 	}
-	// fmt.Println("INPUT:", input)
+
 	return input
 }

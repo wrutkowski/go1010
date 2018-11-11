@@ -1,6 +1,8 @@
 package neural
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,4 +76,113 @@ func TestSortNetworksByFitness(t *testing.T) {
 	assert.Equal(float32(10), manager.Networks[0].Fitness)
 	assert.Equal(float32(5), manager.Networks[1].Fitness)
 	assert.Equal(float32(0.2), manager.Networks[2].Fitness)
+}
+
+func TestSaveToFile(t *testing.T) {
+	assert := assert.New(t)
+	stubRandomProvider := StubRandomProvider{StubNextRange: 0.25}
+
+	var manager NetworkManager
+	manager.layers = []int{2, 3, 2}
+	var net1 Network
+	net1.Fitness = 0.2
+	net2 := NewNetwork([]int{2, 3, 2}, stubRandomProvider)
+	net2.Fitness = 10
+	var net3 Network
+	net3.Fitness = 5
+
+	manager.Networks = []Network{net1, net2, net3}
+
+	saveError := manager.SaveToFile("./TestSaveToFile.neural")
+	assert.Nil(saveError)
+
+	assert.FileExists("./TestSaveToFile.neural")
+
+	data, err := ioutil.ReadFile("./TestSaveToFile.neural")
+	assert.Nil(err)
+	assert.NotNil(data)
+	content := string(data)
+
+	assert.Equal("2,3,2|0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000", content)
+
+	// clean up
+	os.Remove("./TestSaveToFile.neural")
+}
+
+func TestLoadFromFile(t *testing.T) {
+	assert := assert.New(t)
+	ioutil.WriteFile("./TestLoadFromFile.neural", []byte("2,3,2|0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000"), 0644)
+
+	manager := NewNetworkManager(2, 2, []int{3}, 10)
+
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[1][0].weights[0])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[1][0].weights[1])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[1][1].weights[0])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[1][1].weights[1])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[1][2].weights[0])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[1][2].weights[1])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[2][0].weights[0])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[2][0].weights[1])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[2][0].weights[2])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[2][1].weights[0])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[2][1].weights[1])
+	assert.NotEqual(float32(0.25), manager.Networks[9].neuronLayers[2][1].weights[2])
+
+	loadError := manager.LoadFromFile("./NonExistentFile")
+	assert.NotNil(loadError)
+
+	loadError = manager.LoadFromFile("./TestLoadFromFile.neural")
+	assert.Nil(loadError)
+
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[1][0].weights[0])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[1][0].weights[1])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[1][1].weights[0])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[1][1].weights[1])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[1][2].weights[0])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[1][2].weights[1])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[2][0].weights[0])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[2][0].weights[1])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[2][0].weights[2])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[2][1].weights[0])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[2][1].weights[1])
+	assert.Equal(float32(0.25), manager.Networks[9].neuronLayers[2][1].weights[2])
+
+	// clean up
+	os.Remove("./TestLoadFromFile.neural")
+}
+
+func TestLoadFromFileIncorrectFormat(t *testing.T) {
+	assert := assert.New(t)
+	manager := NewNetworkManager(2, 2, []int{3}, 10)
+
+	ioutil.WriteFile("./TestLoadFromFileIncorrectFormat.neural", []byte("1|2|3"), 0644)
+	loadError := manager.LoadFromFile("./TestLoadFromFileIncorrectFormat.neural")
+	assert.NotNil(loadError)
+
+	ioutil.WriteFile("./TestLoadFromFileIncorrectFormat.neural", []byte("1,3|2,3"), 0644)
+	loadError = manager.LoadFromFile("./TestLoadFromFileIncorrectFormat.neural")
+	assert.NotNil(loadError)
+
+	ioutil.WriteFile("./TestLoadFromFileIncorrectFormat.neural", []byte("1,2,3|2,3"), 0644)
+	loadError = manager.LoadFromFile("./TestLoadFromFileIncorrectFormat.neural")
+	assert.NotNil(loadError)
+
+	ioutil.WriteFile("./TestLoadFromFileIncorrectFormat.neural", []byte("2,ABC,3|2,3"), 0644)
+	loadError = manager.LoadFromFile("./TestLoadFromFileIncorrectFormat.neural")
+	assert.NotNil(loadError)
+
+	ioutil.WriteFile("./TestLoadFromFileIncorrectFormat.neural", []byte("2,3,2|2,3"), 0644)
+	loadError = manager.LoadFromFile("./TestLoadFromFileIncorrectFormat.neural")
+	assert.NotNil(loadError)
+
+	ioutil.WriteFile("./TestLoadFromFileIncorrectFormat.neural", []byte("2,3,2|0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000"), 0644)
+	loadError = manager.LoadFromFile("./TestLoadFromFileIncorrectFormat.neural")
+	assert.NotNil(loadError)
+
+	ioutil.WriteFile("./TestLoadFromFileIncorrectFormat.neural", []byte("2,3,2|0.250000,0.250000,0.A250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000,0.250000"), 0644)
+	loadError = manager.LoadFromFile("./TestLoadFromFileIncorrectFormat.neural")
+	assert.NotNil(loadError)
+
+	// clean up
+	os.Remove("./TestLoadFromFileIncorrectFormat.neural")
 }

@@ -2,8 +2,11 @@ package neural
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -93,4 +96,100 @@ func (manager NetworkManager) sortNetworksByFitness() {
 	sort.Slice(manager.Networks, func(i, j int) bool {
 		return manager.Networks[i].Fitness > manager.Networks[j].Fitness
 	})
+}
+
+// SaveToFile sorts neural network by their fitness and saves the top performant
+// network to file with a given name, returns an error in case of a save failure
+func (manager NetworkManager) SaveToFile(name string) error {
+	neuralSerialized := ""
+
+	manager.sortNetworksByFitness()
+
+	network := manager.Networks[0]
+
+	for layer := 0; layer < len(manager.layers); layer++ {
+		neuralSerialized += strconv.Itoa(manager.layers[layer])
+		if layer < len(manager.layers)-1 {
+			neuralSerialized += ","
+		}
+	}
+
+	neuralSerialized += "|"
+
+	for layerIndex := 0; layerIndex < len(network.neuronLayers); layerIndex++ {
+		for neuronIndex := 0; neuronIndex < len(network.neuronLayers[layerIndex]); neuronIndex++ {
+			for weightIndex := 0; weightIndex < len(network.neuronLayers[layerIndex][neuronIndex].weights); weightIndex++ {
+				neuralSerialized += fmt.Sprintf("%f,", network.neuronLayers[layerIndex][neuronIndex].weights[weightIndex])
+			}
+		}
+	}
+	neuralSerialized = neuralSerialized[:len(neuralSerialized)-1]
+
+	err := ioutil.WriteFile(name, []byte(neuralSerialized), 0644)
+
+	return err
+}
+
+// LoadFromFile loads and parses content of the file with given name and replaces
+// least performant network with parsed one, returns an error in case the load or
+// parse was not successful
+func (manager NetworkManager) LoadFromFile(name string) error {
+	data, err := ioutil.ReadFile(name)
+	if err != nil {
+		return err
+	}
+
+	content := string(data)
+
+	contentComponents := strings.Split(content, "|")
+	if len(contentComponents) != 2 {
+		return fmt.Errorf("Incorrect file format")
+	}
+
+	// layers
+	layersComponents := strings.Split(contentComponents[0], ",")
+
+	if len(layersComponents) != len(manager.layers) {
+		return fmt.Errorf("Incompatible layer setting")
+	}
+	for layerIndex := 0; layerIndex < len(manager.layers); layerIndex++ {
+		parsedLayer, parseError := strconv.Atoi(layersComponents[layerIndex])
+		if parseError != nil {
+			return parseError
+		}
+		if parsedLayer != manager.layers[layerIndex] {
+			return fmt.Errorf("Incompatible layer setting. Parsed: %d, expected: %d", parsedLayer, manager.layers[layerIndex])
+		}
+	}
+
+	// weights
+	weightsComponents := strings.Split(contentComponents[1], ",")
+	loadedWeightIndex := 0
+	network := manager.Networks[0]
+	var loadedNetwork Network
+	loadedNetwork.randomProvider = network.randomProvider
+	loadedNetwork.neuronLayers = make([][]Neuron, len(network.neuronLayers))
+	for layerIndex := 0; layerIndex < len(network.neuronLayers); layerIndex++ {
+		loadedNetwork.neuronLayers[layerIndex] = make([]Neuron, len(network.neuronLayers[layerIndex]))
+		for neuronIndex := 0; neuronIndex < len(network.neuronLayers[layerIndex]); neuronIndex++ {
+			var neuron Neuron
+			neuron.weights = make([]float32, len(network.neuronLayers[layerIndex][neuronIndex].weights))
+			for weightIndex := 0; weightIndex < len(network.neuronLayers[layerIndex][neuronIndex].weights); weightIndex++ {
+				if loadedWeightIndex > len(weightsComponents)-1 {
+					return fmt.Errorf("Incompatible weights length")
+				}
+				parsedWeight, parseError := strconv.ParseFloat(weightsComponents[loadedWeightIndex], 32)
+				if parseError != nil {
+					return parseError
+				}
+				neuron.weights[weightIndex] = float32(parsedWeight)
+
+				loadedWeightIndex++
+			}
+			loadedNetwork.neuronLayers[layerIndex][neuronIndex] = neuron
+		}
+	}
+	manager.Networks[len(manager.Networks)-1] = loadedNetwork
+
+	return nil
 }

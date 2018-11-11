@@ -15,7 +15,7 @@ import (
 
 func main() {
 	columns := 3
-	rows := 4
+	rows := 1
 	drawEveryRun := false
 
 	population := rows * columns
@@ -32,6 +32,8 @@ func main() {
 	untilNextGeneration := false
 	untilFitnessIsAbove := float32(0)
 	untilTimeHasPassed := time.Now()
+	loadFromFile := ""
+	saveToFile := ""
 
 	for {
 		untilTimeHasPassedDiff := time.Now().Sub(untilTimeHasPassed)
@@ -46,9 +48,23 @@ func main() {
 
 			if interactionEnabled {
 				runForSeconds := 0
-				exit, generations, steps, untilNextGeneration, untilFitnessIsAbove, runForSeconds, drawEveryRun = nextCommand(drawEveryRun)
+				exit, generations, steps, untilNextGeneration, untilFitnessIsAbove, runForSeconds, drawEveryRun, saveToFile, loadFromFile = nextCommand(drawEveryRun)
 				if runForSeconds > 0 {
 					untilTimeHasPassed = time.Now().Add(time.Second * time.Duration(runForSeconds))
+				}
+				if saveToFile != "" {
+					fmt.Print("Saving... ")
+					if error := neuralManager.SaveToFile(saveToFile); error != nil {
+						fmt.Println("Error while saving. ", error)
+					}
+					saveToFile = ""
+				}
+				if loadFromFile != "" {
+					fmt.Print("Loading... ")
+					if error := neuralManager.LoadFromFile(loadFromFile); error != nil {
+						fmt.Println("Error while loading. ", error)
+					}
+					loadFromFile = ""
 				}
 			}
 		}
@@ -97,7 +113,7 @@ func main() {
 
 }
 
-func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNextGeneration bool, untilFitnessIsAbove float32, runForSeconds int, drawingEnabled bool) {
+func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNextGeneration bool, untilFitnessIsAbove float32, runForSeconds int, drawingEnabled bool, saveToFile string, loadFromFile string) {
 	instructions := `Instructions:
 	Enter - next iteration
 	s NUM - skip NUM of steps
@@ -106,7 +122,8 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 	t NUM - run for NUM seconds
 	ng - run until next generation
 	drawing on/off - enable/disable drawing each iteration
-	save filename - saves top performant Neural Network to a file /WIP/
+	save filename - saves top performant Neural Network to a file
+	load filename - loads Neural Network to last place
 	help - this help
 	e - exit`
 
@@ -119,11 +136,11 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 	components := strings.Split(text, " ")
 
 	if components[0] == "exit" || components[0] == "e" {
-		return true, 0, 0, false, 0, 0, drawing
+		return true, 0, 0, false, 0, 0, drawing, "", ""
 	}
 
 	if components[0] == "ng" {
-		return false, 0, 0, true, 0, 0, drawing
+		return false, 0, 0, true, 0, 0, drawing, "", ""
 	}
 
 	if components[0] == "s" {
@@ -132,7 +149,7 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 			return nextCommand(drawing)
 		}
 		s, _ := strconv.Atoi(components[1])
-		return false, 0, s, false, 0, 0, drawing
+		return false, 0, s, false, 0, 0, drawing, "", ""
 	}
 
 	if components[0] == "g" {
@@ -141,7 +158,7 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 			return nextCommand(drawing)
 		}
 		g, _ := strconv.Atoi(components[1])
-		return false, g, 0, false, 0, 0, drawing
+		return false, g, 0, false, 0, 0, drawing, "", ""
 	}
 
 	if components[0] == "f" {
@@ -150,7 +167,7 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 			return nextCommand(drawing)
 		}
 		f, _ := strconv.Atoi(components[1])
-		return false, 0, 0, false, float32(f), 0, drawing
+		return false, 0, 0, false, float32(f), 0, drawing, "", ""
 	}
 
 	if components[0] == "t" {
@@ -159,7 +176,7 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 			return nextCommand(drawing)
 		}
 		t, _ := strconv.Atoi(components[1])
-		return false, 0, 0, false, 0, t, drawing
+		return false, 0, 0, false, 0, t, drawing, "", ""
 	}
 
 	if components[0] == "drawing" {
@@ -168,10 +185,28 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 			return nextCommand(drawing)
 		}
 		if components[1] == "enable" || components[1] == "e" || components[1] == "1" {
-			return false, 0, 0, false, 0, 0, true
+			return false, 0, 0, false, 0, 0, true, "", ""
 		} else {
-			return false, 0, 0, false, 0, 0, false
+			return false, 0, 0, false, 0, 0, false, "", ""
 		}
+	}
+
+	if components[0] == "save" {
+		if len(components) < 2 {
+			fmt.Println("Wrong command format. save filename - saves top performant Neural Network to a file, eg. `save network.neural`")
+			return nextCommand(drawing)
+		}
+		save := components[1]
+		return false, 0, 0, false, 0, 0, drawing, save, ""
+	}
+
+	if components[0] == "load" {
+		if len(components) < 2 {
+			fmt.Println("Wrong command format. load filename - loads Neural Network to last place, eg. `load network.neural`")
+			return nextCommand(drawing)
+		}
+		load := components[1]
+		return false, 0, 0, false, 0, 0, drawing, "", load
 	}
 
 	if components[0] == "help" {
@@ -179,7 +214,7 @@ func nextCommand(drawing bool) (exit bool, generations int, steps int, untilNext
 		return nextCommand(drawing)
 	}
 
-	return false, 0, 0, false, 0, 0, drawing
+	return false, 0, 0, false, 0, 0, drawing, "", ""
 }
 
 func calculateFitness(g game.Game, errorGame error) float32 {
